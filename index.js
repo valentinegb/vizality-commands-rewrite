@@ -33,14 +33,17 @@ export default class VizalityCommandsRewrite extends Plugin {
      * registerCommand({
      * name: 'say',
      * description: 'Just a test command.',
-     * options: [{
+     * options: [ {
      * type: ApplicationCommandOptionType.STRING,
      * name: 'message',
      * description: 'Message to say.',
      * required: true
-     * }],
+     * } ],
      * execute: (options, { channel }) => {
-     * sendVizalityBotMessage(channel.id, getModule('getOptionalString').getOptionalString(options, 'message')?.trim() || '');
+     * sendVizalityBotMessage(
+     * channel.id,
+     * getOptionalString(options, 'message')?.trim() || ''
+     * );
      * }
      * });
      */
