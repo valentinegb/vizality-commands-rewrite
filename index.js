@@ -256,7 +256,7 @@ export default class VizalityCommandsRewrite extends Plugin {
       execute: (options) => ({
         content: getOptionalString(options, 'message')
           ?.split('')
-          ?.map((character, index) => index % 2 ? character.toUpperCase() : character)
+          ?.map((character, index) => index % 2 ? character.toUpperCase() : character.toLowerCase())
           ?.join('') ||
           ''
       })
