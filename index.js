@@ -18,31 +18,30 @@ export default class VizalityCommandsRewrite extends Plugin {
     const { getOptionalString } = getModule('getOptionalString');
 
     const getNextAvailableCommandID = (id = -1) => {
-      if (BUILT_IN_COMMANDS.find(command => command.id === `${id}`))
-        return getNextAvailableCommandID(id - 1);
-      else return `${id}`;
-    }
+      if (BUILT_IN_COMMANDS.find(command => command.id === `${id}`)) return getNextAvailableCommandID(id - 1);
+      return `${id}`;
+    };
     /**
      * Registers a built-in Discord command.
      * @param {object} command The command
      * @param {string} command.name Name of the command
      * @param {string} command.description Description of the command
-     * @param {Object[]} [command.options] The command's options (parameters, basically)
-     * @param {function} [command.predicate] Determines wether the command should be accessible
-     * @param {function} command.execute The function to be executed upon the command being executed
+     * @param {object[]} [command.options] The command's options (parameters, basically)
+     * @param {Function} [command.predicate] Determines wether the command should be accessible
+     * @param {Function} command.execute The function to be executed upon the command being executed
      * @example
      * registerCommand({
-     *   name: 'say',
-     *   description: 'Just a test command.',
-     *   options: [{
-     *     type: ApplicationCommandOptionType.STRING,
-     *     name: 'message',
-     *     description: 'Message to say.',
-     *     required: true
-     *   }],
-     *   execute: (options, { channel }) => {
-     *     sendVizalityBotMessage(channel.id, getModule('getOptionalString').getOptionalString(options, 'message')?.trim() || '');
-     *   }
+     * name: 'say',
+     * description: 'Just a test command.',
+     * options: [{
+     * type: ApplicationCommandOptionType.STRING,
+     * name: 'message',
+     * description: 'Message to say.',
+     * required: true
+     * }],
+     * execute: (options, { channel }) => {
+     * sendVizalityBotMessage(channel.id, getModule('getOptionalString').getOptionalString(options, 'message')?.trim() || '');
+     * }
      * });
      */
     const registerCommand = (command) => {
@@ -62,7 +61,7 @@ export default class VizalityCommandsRewrite extends Plugin {
      * Sends a bot message with a Vizality custom username and avatar.
      * @param {snowflake} channelId ID of the channel to send the message to
      * @param {string} [message] The messages content
-     * @param {Object[]} [embeds] An array of embeds
+     * @param {object[]} [embeds] An array of embeds
      */
     const sendVizalityBotMessage = (channelId, message, embeds) => {
       const clydeMessage = getModule('createBotMessage')
@@ -77,7 +76,7 @@ export default class VizalityCommandsRewrite extends Plugin {
           avatar: '215cd0cb8cc45ae6216a594353000d44'
         }
       });
-    }
+    };
 
     BUILT_IN_SECTIONS.push({
       id: applicationId,
@@ -90,7 +89,7 @@ export default class VizalityCommandsRewrite extends Plugin {
       name: 'panic',
       description: 'Temporarily disables Vizality. Reload Discord to restore.',
       execute: () => vizality.stop()
-    })
+    });
 
     registerCommand({
       name: 'relaunch',
@@ -101,12 +100,12 @@ export default class VizalityCommandsRewrite extends Plugin {
     registerCommand({
       name: 'say',
       description: 'Just a test command.',
-      options: [{
+      options: [ {
         type: ApplicationCommandOptionType.STRING,
         name: 'message',
         description: 'Message to say.',
         required: true
-      }],
+      } ],
       execute: (options, { channel }) => {
         sendVizalityBotMessage(
           channel.id,
@@ -123,12 +122,12 @@ export default class VizalityCommandsRewrite extends Plugin {
           type: ApplicationCommandOptionType.STRING,
           name: 'header',
           description: 'The modal\'s header.',
-          required: true,
+          required: true
         },
         {
           type: ApplicationCommandOptionType.STRING,
           name: 'content',
-          description: 'The modal\'s content.',
+          description: 'The modal\'s content.'
         },
         {
           type: ApplicationCommandOptionType.STRING,
@@ -260,4 +259,4 @@ export default class VizalityCommandsRewrite extends Plugin {
       BUILT_IN_COMMANDS.length - firstVizalityCommandIndex
     );
   }
-};
+}
