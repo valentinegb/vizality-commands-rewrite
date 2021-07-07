@@ -1,0 +1,10 @@
+{
+  "name": "Vizality Commands Rewrite",
+  "description": "Adds commands to Discord's built-in commands list.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": {
+    "name": "Vbriese",
+    "id": "441384103946878987"
+  }
+}
