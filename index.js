@@ -3,7 +3,18 @@ import { Plugin } from '@vizality/entities';
 import { getModule } from '@vizality/webpack';
 import { openModal } from '@vizality/modal';
 import { toPlural, toTitleCase } from '@vizality/util/string';
-import { NewModal, Header, Text } from '@vizality/components';
+import { getMediaDimensions } from '@vizality/util/file';
+import {
+  NewModal,
+  Header,
+  Text,
+  LazyImageZoomable,
+  ImageModal,
+  Tooltip,
+  Anchor,
+  FormTitle
+} from '@vizality/components';
+import { AddonsList } from '@vizality/components/addon';
 
 const applicationId = '861848400714399765';
 
@@ -297,21 +308,83 @@ export default class VizalityCommandsRewrite extends Plugin {
           {
             type: ApplicationCommandOptionType.STRING,
             name: `${type}_id`,
-            description: 'Required by the actions settings, enable, disable, stop, reload, and uninstall.',
+            description: 'Required by the settings, enable, disable, reload, and uninstall actions. Optional for the install action.',
             choices: [ ...addons, { name: 'all' } ]
+          },
+          {
+            type: ApplicationCommandOptionType.STRING,
+            name: `${type}_url`,
+            description: 'Optional for the install action.'
+          },
+          {
+            type: ApplicationCommandOptionType.STRING,
+            name: 'filter',
+            description: 'Optional for the list action.',
+            choices: [
+              { name: 'all' },
+              { name: 'enabled' },
+              { name: 'disabled' }
+            ]
           }
         ],
         execute: (options, { channel }) => {
           const addon_id = getOptionalString(options, `${type}_id`);
 
-          switch (getOptionalString(options, 'action')) {
-            case 'settings':
-              // . . .
-              break;
-            case 'manage':
-              // . . .
-              break;
-            case 'enable':
+          const actions = {
+            settings: () => {
+              if (!addon_id) {
+                sendVizalityBotMessage(channel.id, `You must specify a ${type} to manage its settings.`);
+              } else if (!vizality.manager[toPlural(type)].isInstalled(addon_id)) {
+                sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is not installed.`);
+              } else {
+                if (!vizality.manager[toPlural(type)].isEnabled(addon_id)) {
+                  sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is disabled.`);
+                } else if (!vizality.manager[toPlural(type)].hasSettings(addon_id)) {
+                  sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` does not have settings.`);
+                } else {
+                  const addon = vizality.manager[toPlural(type)].get(addon_id);
+                  const Settings = addon.sections.settings.render;
+
+                  sendVizalityBotMessage(channel.id, undefined, [ {
+                    color: type === 'plugin' ? 0x42ffa7 : 0xb68aff,
+                    footer: {
+                      text: <Anchor
+                        href={`${window.location.origin}/vizality/${toPlural(type)}/${addon_id}`}
+                        onClick={e => {
+                          e.preventDefault();
+                          vizality.api.routes.navigateTo(`/vizality/${toPlural(type)}/${addon_id}`);
+                        }}
+                      >
+                        {addon.manifest.name}
+                      </Anchor>,
+                      icon_url: addon.manifest.icon
+                    },
+                    provider: {
+                      name: <>
+                        <FormTitle tag='h2' className='vz-manager-command-addon-settings-header'>
+                          Settings
+                        </FormTitle>
+                        <Settings />
+                      </>
+                    }
+                  } ]);
+                }
+              }
+            },
+            manage: () => {
+              sendVizalityBotMessage(channel.id, undefined, [ {
+                color: type === 'plugin' ? 0x42ffa7 : 0xb68aff,
+                provider: {
+                  name: <>
+                    <FormTitle tag='h2' className='vz-manager-command-addon-manage-header'>
+                      {`Manage ${toTitleCase(toPlural(type))}`}
+                    </FormTitle>
+                    <AddonsList className='vz-addons-list-embed' type={type} display='compact' limit={8} />
+                  </>
+                }
+              } ]);
+            },
+            enable: () => {
               if (!addon_id) {
                 sendVizalityBotMessage(channel.id, `You must specify a ${type} to enable, or use \`all\` to enable all.`);
               } else if (addon_id === 'all') {
@@ -327,8 +400,8 @@ export default class VizalityCommandsRewrite extends Plugin {
                   sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` has been enabled.`);
                 }
               }
-              break;
-            case 'disable':
+            },
+            disable: () => {
               if (!addon_id) {
                 sendVizalityBotMessage(channel.id, `You must specify a ${type} to disable, or use \`all\` to disable all.`);
               } else if (addon_id === 'all') {
@@ -344,25 +417,159 @@ export default class VizalityCommandsRewrite extends Plugin {
                   sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` has been disabled.`);
                 }
               }
-              break;
-            case 'stop':
-              // . . .
-              break;
-            case 'reload':
-              // . . .
-              break;
-            case 'list':
-              // . . .
-              break;
-            case 'install':
-              // . . .
-              break;
-            case 'uninstall':
-              // . . .
-              break;
-            default:
+            },
+            stop: () => {
+              try {
+                vizality.manager[toPlural(type)].stop();
+              } catch (error) {
+                sendVizalityBotMessage(channel.id, `There was a problem terminating all ${toPlural(type)}:\n\`${error}\``);
+              }
+            },
+            reload: () => {
+              if (!addon_id) {
+                sendVizalityBotMessage(channel.id, `You must specify a ${type} to reload, or use \`all\` to reload all.`);
+              } else if (addon_id === 'all') {
+                vizality.manager[toPlural(type)].reloadAll();
+                sendVizalityBotMessage(channel.id, `All ${toPlural(type)} have been reloaded.`);
+              } else if (!vizality.manager[toPlural(type)].isInstalled(addon_id)) {
+                sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is not installed.`);
+              } else {
+                if (vizality.manager[toPlural(type)].isDisabled(addon_id)) {
+                  sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is disabled.`);
+                } else {
+                  vizality.manager[toPlural(type)].reload(addon_id);
+                  sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` has been reloaded.`);
+                }
+              }
+            },
+            list: async () => {
+              const filter = getOptionalString(options, 'filter') || 'all';
+              let addons;
+
+              switch (filter) {
+                case 'all': addons = vizality.manager[toPlural(type)].keys; break;
+                case 'enabled': addons = vizality.manager[toPlural(type)].getEnabledKeys(); break;
+                case 'disabled': addons = vizality.manager[toPlural(type)].getDisabledKeys(); break;
+              }
+
+              if (!addons.length) {
+                switch (filter) {
+                  case 'all': sendVizalityBotMessage(channel.id, `You have no ${toPlural(type)} installed.`); break;
+                  case 'enabled': sendVizalityBotMessage(channel.id, `You have no ${toPlural(type)} enabled.`); break;
+                  case 'disabled': sendVizalityBotMessage(channel.id, `You have no ${toPlural(type)} disabled.`); break;
+                }
+              }
+
+              const items = [];
+
+              const renderAddonItem = async (addonId) => {
+                const addon = vizality.manager[toPlural(type)].get(addonId);
+                addon && items.push(
+                  <div className='vz-embed-table-grid-row'>
+                    <div className='vz-embed-table-grid-row-inner'>
+                      <LazyImageZoomable
+                        className='vz-manager-command-list-embed-table-addon-image-wrapper'
+                        imageClassName='vz-manager-command-list-embed-table-addon-img'
+                        src={addon.manifest.icon}
+                        width='20'
+                        height='20'
+                        shouldLink={false}
+                        onClick={async () => {
+                          const albumDimensions = await getMediaDimensions(addon.manifest.icon);
+                          openModal(() =>
+                            <ImageModal
+                              src={addon.manifest.icon}
+                              width={albumDimensions.width}
+                              height={albumDimensions.height}
+                            />);
+                        }}
+                      />
+                      <Tooltip text={addonId}>
+                        <Anchor
+                          type={type}
+                          addonId={addonId}
+                          className='vz-embed-table-grid-row-inner-text'
+                        >
+                          {addon.manifest.name}
+                        </Anchor>
+                      </Tooltip>
+                    </div>
+                    <div className='vz-embed-table-grid-row-inner'>
+                      <Anchor
+                        type='user'
+                        userId={addon.manifest.author.id}
+                        className='vz-embed-table-grid-row-inner-text'
+                      >
+                        {typeof addon.manifest.author === 'string' ? addon.manifest.author : addon.manifest.author.name}
+                      </Anchor>
+                    </div>
+                    <div className='vz-embed-table-grid-row-inner'>
+                      {addon.manifest.version}
+                    </div>
+                  </div>
+                );
+              };
+
+              const renderItems = async () => {
+                return Promise.all(addons.map(renderAddonItem));
+              };
+
+              sendVizalityBotMessage(channel.id, undefined, [ {
+                title: `${filter === 'all' ? '' : `${toTitleCase(filter)} `}${toTitleCase(toPlural(type))} List`,
+                description: `${addons.length} ${filter === 'all' ? '' : `${filter.toLowerCase()} `}${toPlural(type)} were found.`,
+                color: type === 'plugin' ? 0x42ffa7 : 0xb68aff,
+                footer: {
+                  text: <>
+                    {await renderItems().then(() => {
+                      return (
+                        <div className='vz-embed-table vz-manager-command-list-embed-table'>
+                          <div className='vz-embed-table-grid-header vz-embed-table-grid-row'>
+                            <div className='vz-embed-table-grid-header-inner'>
+                              Name
+                            </div>
+                            <div className='vz-embed-table-grid-header-inner'>
+                              Author
+                            </div>
+                            <div className='vz-embed-table-grid-header-inner'>
+                              Version
+                            </div>
+                          </div>
+                          {items.map(item => item)}
+                        </div>
+                      );
+                    })}
+                  </>
+                }
+              } ]);
+            },
+            install: () => {
+              const addon_url = getOptionalString(options, `${type}_url`);
+
+              if (!addon_url && !addon_id) {
+                sendVizalityBotMessage(channel.id, `You must specify a \`${type}_url\` or \`${type}_id\` to install a ${type} from.`);
+              } else {
+                vizality.manager[toPlural(type)].install(addon_url || addon_id);
+              }
+            },
+            uninstall: () => {
+              if (!addon_id) {
+                sendVizalityBotMessage(channel.id, `You must specify a ${type} to uninstall.`);
+              } else if (!vizality.manager[toPlural(type)].isInstalled(addon_id)) {
+                sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is not installed.`);
+              } else {
+                try {
+                  vizality.manager[toPlural(type)].uninstall(addon_id);
+                } catch (error) {
+                  sendVizalityBotMessage(channel.id, error);
+                }
+              }
+            },
+            none: () => {
               sendVizalityBotMessage(channel.id, 'Please specify a valid action to invoke.');
-          }
+            }
+          };
+
+          actions[getOptionalString(options, 'action') || 'none']();
         }
       });
     });
