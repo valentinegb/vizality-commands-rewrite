@@ -2,6 +2,7 @@ import React from 'react';
 import { Plugin } from '@vizality/entities';
 import { getModule } from '@vizality/webpack';
 import { openModal } from '@vizality/modal';
+import { toPlural, toTitleCase } from '@vizality/util/string';
 import { NewModal, Header, Text } from '@vizality/components';
 
 const applicationId = '861848400714399765';
@@ -260,6 +261,96 @@ export default class VizalityCommandsRewrite extends Plugin {
           ?.join('') ||
           ''
       })
+    });
+
+    [ 'plugin', 'theme' ].forEach((type) => {
+      const addons = [];
+
+      vizality.manager[toPlural(type)].keys
+        .sort((a, b) => a - b)
+        .map(addon => vizality.manager[toPlural(type)].get(addon))
+        .forEach((addon) => {
+          addons.push({ name: addon.addonId });
+        });
+
+      registerCommand({
+        name: type,
+        description: `Invoke an action on a ${type}.`,
+        options: [
+          {
+            type: ApplicationCommandOptionType.STRING,
+            name: 'action',
+            description: 'The action to invoke',
+            required: true,
+            choices: [
+              { name: 'settings' },
+              { name: 'manage' },
+              { name: 'enable' },
+              { name: 'disable' },
+              { name: 'stop' },
+              { name: 'reload' },
+              { name: 'list' },
+              { name: 'install' },
+              { name: 'uninstall' }
+            ]
+          },
+          {
+            type: ApplicationCommandOptionType.STRING,
+            name: `${type}_id`,
+            description: 'Required by the actions settings, enable, disable, stop, reload, and uninstall.',
+            choices: [ ...addons, { name: 'all' } ]
+          }
+        ],
+        execute: (options, { channel }) => {
+          const addon_id = getOptionalString(options, `${type}_id`);
+
+          switch (getOptionalString(options, 'action')) {
+            case 'settings':
+              // . . .
+              break;
+            case 'manage':
+              // . . .
+              break;
+            case 'enable':
+              if (!addon_id) {
+                sendVizalityBotMessage(channel.id, `You must specify a ${type} to enable, or use \`all\` to enable all.`);
+              } else if (addon_id === 'all') {
+                vizality.manager[toPlural(type)].enableAll();
+                sendVizalityBotMessage(channel.id, `All ${toPlural(type)} have been enabled.`);
+              } else if (!vizality.manager[toPlural(type)].isInstalled(addon_id)) {
+                sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is not installed.`);
+              } else {
+                if (vizality.manager[toPlural(type)].isEnabled(addon_id)) {
+                  sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is already enabled.`);
+                } else {
+                  vizality.manager[toPlural(type)].enable(addon_id);
+                  sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` has been enabled.`);
+                }
+              }
+              break;
+            case 'disable':
+              // . . .
+              break;
+            case 'stop':
+              // . . .
+              break;
+            case 'reload':
+              // . . .
+              break;
+            case 'list':
+              // . . .
+              break;
+            case 'install':
+              // . . .
+              break;
+            case 'uninstall':
+              // . . .
+              break;
+            default:
+              sendVizalityBotMessage(channel.id, 'Please specify a valid action to invoke.');
+          }
+        }
+      });
     });
   }
 
