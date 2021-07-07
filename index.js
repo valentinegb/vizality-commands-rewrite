@@ -242,6 +242,25 @@ export default class VizalityCommandsRewrite extends Plugin {
         this.log('/option_types options', options);
       }
     });
+
+    registerCommand({
+      type: ApplicationCommandType.BUILT_IN_TEXT,
+      name: 'mock',
+      description: 'Mocks someone for their mistakes in chat.',
+      options: [ {
+        type: ApplicationCommandOptionType.STRING,
+        name: 'message',
+        description: 'Your message',
+        required: true
+      } ],
+      execute: (options) => ({
+        content: getOptionalString(options, 'message')
+          ?.split('')
+          ?.map((character, index) => index % 2 ? character.toUpperCase() : character)
+          ?.join('') ||
+          ''
+      })
+    });
   }
 
   stop () {
