@@ -329,7 +329,21 @@ export default class VizalityCommandsRewrite extends Plugin {
               }
               break;
             case 'disable':
-              // . . .
+              if (!addon_id) {
+                sendVizalityBotMessage(channel.id, `You must specify a ${type} to disable, or use \`all\` to disable all.`);
+              } else if (addon_id === 'all') {
+                vizality.manager[toPlural(type)].disableAll();
+                sendVizalityBotMessage(channel.id, `All ${toPlural(type)} have been disabled.`);
+              } else if (!vizality.manager[toPlural(type)].isInstalled(addon_id)) {
+                sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is not installed.`);
+              } else {
+                if (vizality.manager[toPlural(type)].isDisabled(addon_id)) {
+                  sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` is already disabled.`);
+                } else {
+                  vizality.manager[toPlural(type)].disable(addon_id);
+                  sendVizalityBotMessage(channel.id, `${toTitleCase(type)} \`${addon_id}\` has been disabled.`);
+                }
+              }
               break;
             case 'stop':
               // . . .
