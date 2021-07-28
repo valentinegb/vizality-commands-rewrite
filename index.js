@@ -93,12 +93,12 @@ export default class VizalityCommandsRewrite extends Plugin {
       });
     };
 
-    BUILT_IN_SECTIONS.push({
+    BUILT_IN_SECTIONS[applicationId] = {
       id: applicationId,
       type: ApplicationCommandSectionType.GUILD,
       name: 'Vizality Commands',
       icon: '838cbc9f20a59ff7bad484c077220def'
-    });
+    };
 
     registerCommand({
       name: 'panic',
@@ -578,12 +578,7 @@ export default class VizalityCommandsRewrite extends Plugin {
   stop () {
     const { BUILT_IN_COMMANDS, BUILT_IN_SECTIONS } = getModule('BUILT_IN_COMMANDS');
 
-    BUILT_IN_SECTIONS.splice(
-      BUILT_IN_SECTIONS.indexOf(
-        BUILT_IN_SECTIONS.find(section => section.id === applicationId)
-      ),
-      1
-    );
+    BUILT_IN_SECTIONS[applicationId] = undefined;
 
     const firstVizalityCommandIndex = BUILT_IN_COMMANDS.indexOf(
       BUILT_IN_COMMANDS.find(command => command.applicationId === applicationId)
